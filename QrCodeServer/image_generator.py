@@ -1,5 +1,4 @@
 from typing import Optional
-
 import torch
 from PIL import Image
 import qrcode
@@ -8,8 +7,6 @@ from multiprocessing import cpu_count
 import requests
 import io
 import os
-from PIL import Image
-
 from diffusers import (
     StableDiffusionPipeline,
     StableDiffusionControlNetImg2ImgPipeline,
@@ -21,6 +18,7 @@ from diffusers import (
     EulerDiscreteScheduler,
 )
 
+# 初始化QRCode生成器
 qrcode_generator = qrcode.QRCode(
     version=1,
     error_correction=qrcode.ERROR_CORRECT_H,
@@ -28,10 +26,12 @@ qrcode_generator = qrcode.QRCode(
     border=4,
 )
 
+# 加载ControlNet模型
 controlnet = ControlNetModel.from_pretrained(
     "./control_v1p_sd15_qrcode", torch_dtype=torch.float16
 )
 
+# 加载StableDiffusionControlNetImg2ImgPipeline
 pipe = StableDiffusionControlNetImg2ImgPipeline.from_pretrained(
     "./stable-diffusion-v1-5",
     controlnet=controlnet,
@@ -54,7 +54,8 @@ def resize_for_condition_image(input_image: Image.Image, resolution: int):
 
 
 SAMPLER_MAP = {
-    "DPM++ Karras SDE": lambda config: DPMSolverMultistepScheduler.from_config(config, use_karras=True, algorithm_type="sde-dpmsolver++"),
+    "DPM++ Karras SDE": lambda config: DPMSolverMultistepScheduler.from_config(config, use_karras=True,
+                                                                               algorithm_type="sde-dpmsolver++"),
     "DPM++ Karras": lambda config: DPMSolverMultistepScheduler.from_config(config, use_karras=True),
     "Heun": lambda config: HeunDiscreteScheduler.from_config(config),
     "Euler": lambda config: EulerDiscreteScheduler.from_config(config),
@@ -64,29 +65,24 @@ SAMPLER_MAP = {
 
 
 def inference(
-    qr_code_content: str,
-    prompt: str,
-    negative_prompt: str,
-    guidance_scale: float = 10.0,
-    controlnet_conditioning_scale: float = 2.0,
-    strength: float = 0.8,
-    seed: int = -1,
-    init_image: Optional[Image.Image] = None,
-    qrcode_image: Optional[Image.Image] = None,
-    use_qr_code_as_init_image = True,
-    sampler = "DPM++ Karras SDE",
+        qr_code_content: str,
+        prompt: str,
+        negative_prompt: str,
+        guidance_scale: float = 7.5,
+        controlnet_conditioning_scale: float = 2.0,
+        strength: float = 0.5,
+        seed: int = -1,
+        init_image: Optional[Image.Image] = None,
+        qrcode_image: Optional[Image.Image] = None,
+        sampler="DPM++ Karras SDE",
 ):
-    if prompt is None or prompt == "":
-        raise ValueError("Prompt is required")
-
-    if qrcode_image is None and qr_code_content == "":
+    if qr_code_content == "" and qrcode_image is None:
         raise ValueError("QR Code Image or QR Code Content is required")
 
     pipe.scheduler = SAMPLER_MAP[sampler](pipe.scheduler.config)
-
     generator = torch.manual_seed(seed) if seed != -1 else torch.Generator()
 
-    if qr_code_content != "" or qrcode_image.size == (1, 1):
+    if qrcode_image is None:
         print("Generating QR Code from content")
         qr = qrcode.QRCode(
             version=1,
@@ -96,27 +92,31 @@ def inference(
         )
         qr.add_data(qr_code_content)
         qr.make(fit=True)
-
-        qrcode_image = qr.make_image(fill_color="black", back_color="white")
+        qrcode_image = qr.make_image(fill_color="black", back_color="white").convert("RGB")
         qrcode_image = resize_for_condition_image(qrcode_image, 768)
+        print(111111111111111111111)
+        print(qrcode_image)
     else:
-        print("Using QR Code Image")
+        print("Using uploaded QR Code Image")
         qrcode_image = resize_for_condition_image(qrcode_image, 768)
-
-    # hack due to gradio examples
-    init_image = qrcode_image
+    print(6666666666666)
+    if init_image is None:
+        print("------init_image------------")
+        init_image = qrcode_image
 
     out = pipe(
         prompt=prompt,
         negative_prompt=negative_prompt,
-        image=qrcode_image,
-        control_image=qrcode_image,  # type: ignore
-        width=768,  # type: ignore
-        height=768,  # type: ignore
-        guidance_scale=float(guidance_scale),
-        controlnet_conditioning_scale=float(controlnet_conditioning_scale),  # type: ignore
+        image=init_image,
+        control_image=qrcode_image,
+        width=768,
+        height=768,
+        guidance_scale=guidance_scale,
+        controlnet_conditioning_scale=controlnet_conditioning_scale,
         generator=generator,
-        strength=float(strength),
-        num_inference_steps=40,
+        strength=strength,
+        num_inference_steps=80,
     )
-    return out.images[0]  # type: ignore
+
+    print(out)
+    return out["images"][0]
