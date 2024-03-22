@@ -26,17 +26,21 @@ qrcode_generator = qrcode.QRCode(
     border=4,
 )
 
+current_script_path = Path(__file__).parent
+qrcode_model_directory = current_script_path / 'control_v1p_sd15_qrcode'
+sd_model_directory = current_script_path / 'stable-diffusion-v1-5'
+
+
 # 加载ControlNet模型
-controlnet = ControlNetModel.from_pretrained(
-    "./control_v1p_sd15_qrcode", torch_dtype=torch.float16
+controlnet = ControlNetModel.from_pretrained(str(qrcode_model_directory), torch_dtype=torch.float16, use_auth_token=False
 )
 
 # 加载StableDiffusionControlNetImg2ImgPipeline
 pipe = StableDiffusionControlNetImg2ImgPipeline.from_pretrained(
-    "./stable-diffusion-v1-5",
+    str(sd_model_directory),
     controlnet=controlnet,
     safety_checker=None,
-    torch_dtype=torch.float16,
+    torch_dtype=torch.float16,use_auth_token=False
 ).to("cuda")
 pipe.enable_xformers_memory_efficient_attention()
 
@@ -115,7 +119,7 @@ def inference(
         controlnet_conditioning_scale=controlnet_conditioning_scale,
         generator=generator,
         strength=strength,
-        num_inference_steps=80,
+        num_inference_steps=50,
     )
 
     print(out)
