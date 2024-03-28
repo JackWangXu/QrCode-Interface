@@ -27,7 +27,7 @@ qrcode_generator = qrcode.QRCode(
 )
 
 current_script_path = Path(__file__).parent
-qrcode_model_directory = current_script_path / 'control_v1p_sd15_qrcode'
+qrcode_model_directory = current_script_path / 'control_v1p_sd15_qrcode_monster'
 sd_model_directory = current_script_path / 'stable-diffusion-v1-5'
 
 
@@ -101,13 +101,12 @@ def inference(
         print(111111111111111111111)
         print(qrcode_image)
     else:
-        print("Using uploaded QR Code Image")
+        print("666666666666---Using uploaded QR Code Image")
         qrcode_image = resize_for_condition_image(qrcode_image, 768)
-    print(6666666666666)
     if init_image is None:
-        print("------init_image------------")
+        print("------init_image-----------2222222222222222-")
         init_image = qrcode_image
-
+    print(init_image)
     out = pipe(
         prompt=prompt,
         negative_prompt=negative_prompt,
@@ -119,7 +118,7 @@ def inference(
         controlnet_conditioning_scale=controlnet_conditioning_scale,
         generator=generator,
         strength=strength,
-        num_inference_steps=50,
+        num_inference_steps=80,
     )
 
     print(out)

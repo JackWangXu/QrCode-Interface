@@ -50,7 +50,7 @@ def generate_image(request):
                     seed=int(seed)
                 )
             img_io = io.BytesIO()
-            image.save(img_io, 'JPEG', quality=70)
+            image.save(img_io, 'JPEG', quality=90)
             img_io.seek(0)
             return HttpResponse(img_io, content_type='image/jpeg')
         except Exception as e:
